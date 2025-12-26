@@ -1,4 +1,4 @@
-# 🏛️ SIPM - Sistem Informasi Pengaduan Masyarakat
+# 🏛️ SIGAP - Sistem Informasi Gangguan & Anggaran Perbaikan
 
 ![Project Status](https://img.shields.io/badge/Status-Completed-success)
 ![Tech Stack](https://img.shields.io/badge/Stack-React%20%7C%20Tailwind%20%7C%20Supabase-blue)
