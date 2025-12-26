@@ -1,4 +1,3 @@
-// Ini adalah "Database Palsu" untuk Notifikasi
 export const notifications = [
     {
         id: 1,

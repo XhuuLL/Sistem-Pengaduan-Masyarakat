@@ -1,195 +1,254 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
-    ArrowLeft, MapPin, Calendar, User, 
-    MessageSquare, CheckCircle2, Clock, FileText 
+    ArrowLeft, MapPin, Calendar, User, FileText, Phone, Tag,
+    Wallet, Save, CheckCircle2, Clock, AlertCircle, Image as ImageIcon, Loader2
 } from 'lucide-react';
-import StatusBadge from '../Components/Shared/StatusBadge';
-import PriorityBadge from '../Components/Shared/PriorityBadge';
+import CommentSection from '../Components/CommentSection'; 
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Import Data Dummy
-import { complaints } from '../Entities/Complaint';
-import { complaintResponses } from '../Entities/ComplaintResponse';
+import { supabase } from '../supabaseClient';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
 export default function ComplaintDetail() {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [complaint, setComplaint] = useState(null);
-    const [responses, setResponses] = useState([]);
+    const [responses, setResponses] = useState([]); 
     const [loading, setLoading] = useState(true);
-    const [newResponse, setNewResponse] = useState('');
+    const [currentUserRole, setCurrentUserRole] = useState('');
+    const [cost, setCost] = useState('');
+    const [savingCost, setSavingCost] = useState(false);
 
     useEffect(() => {
-        setTimeout(() => {
-            const foundComplaint = complaints.find(c => c.id === parseInt(id));
-            const foundResponses = complaintResponses.filter(r => r.complaint_id === parseInt(id));
+        const session = localStorage.getItem('user_session');
+        if (session) {
+            const user = JSON.parse(session);
+            setCurrentUserRole(user.role);
+        }
+        const fetchData = async () => {
+            try {
+                setLoading(true);
 
-            setComplaint(foundComplaint);
-            setResponses(foundResponses);
-            setLoading(false);
-        }, 500);
-    }, [id]);
+                const { data: reportData, error: reportError } = await supabase
+                    .from('complaints')
+                    .select('*, categories(name)')
+                    .eq('id', id)
+                    .single();
+                
+                if (reportError) throw reportError;
+                setComplaint(reportData);
+                if (reportData.cost_amount) setCost(reportData.cost_amount);
+                setResponses([]); 
 
-    const handleSendResponse = (e) => {
-        e.preventDefault();
-        if (!newResponse.trim()) return;
-        const newMsg = {
-            id: Date.now(),
-            complaint_id: parseInt(id),
-            message: newResponse,
-            is_official: false,
-            responder_name: "Saya (Warga)",
-            responder_role: "warga",
-            created_at: new Date().toISOString()
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Gagal memuat data.");
+                navigate('/dashboard');
+            } finally {
+                setLoading(false);
+            }
         };
 
-        setResponses([...responses, newMsg]);
-        setNewResponse('');
+        fetchData();
+    }, [id, navigate]);
+
+    const handleSaveCost = async () => {
+        try {
+            setSavingCost(true);
+            const { error } = await supabase
+                .from('complaints')
+                .update({ cost_amount: parseInt(cost) || 0 })
+                .eq('id', id);
+
+            if (error) throw error;
+            
+            setComplaint(prev => ({...prev, cost_amount: parseInt(cost) || 0}));
+            alert("Estimasi biaya berhasil disimpan!");
+        } catch (err) {
+            alert("Gagal simpan: " + err.message);
+        } finally {
+            setSavingCost(false);
+        }
     };
 
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('id-ID', {
-            day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
+    const formatRupiah = (number) => {
+        return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(number);
     };
 
-    if (loading) {
-        return <div className="p-10 text-center">Loading detail...</div>;
-    }
+    const handleAddComment = (text) => {
+        const newChat = {
+            id: Date.now(),
+            user: currentUserRole === 'warga' ? "Pelapor" : "Petugas/Admin",
+            role: currentUserRole, 
+            text: text,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setResponses([...responses, newChat]);
+    };
 
-    if (!complaint) {
+    const getStatusBadge = (status) => {
+        const styles = {
+            pending: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400', icon: Clock, label: 'Menunggu' },
+            verified: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400', icon: CheckCircle2, label: 'Terverifikasi' },
+            in_progress: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-400', icon: Loader2, label: 'Diproses' },
+            completed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-400', icon: CheckCircle2, label: 'Selesai' },
+            rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', icon: AlertCircle, label: 'Ditolak' },
+        };
+        const style = styles[status] || styles.pending;
+        const Icon = style.icon;
+
         return (
-            <div className="text-center py-12">
-                <h2 className="text-xl font-bold text-gray-800">Pengaduan Tidak Ditemukan</h2>
-                <Link to="/riwayat" className="text-emerald-600 hover:underline mt-2 block">Kembali ke Riwayat</Link>
+            <div className={`flex items-center px-4 py-2 rounded-lg border border-transparent ${style.bg} ${style.text}`}>
+                <Icon className="w-5 h-5 mr-2" />
+                <span className="font-bold uppercase tracking-wider text-sm">{style.label}</span>
             </div>
         );
-    }
+    };
+
+    if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-emerald-600"/></div>;
+    if (!complaint) return <div className="p-10 text-center">Data tidak ditemukan.</div>;
+
+    const position = [complaint.latitude || -6.879, complaint.longitude || 109.03];
+    const canEdit = currentUserRole === 'admin' || currentUserRole === 'petugas';
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto space-y-6 pb-20 animate-in fade-in duration-300">
             {/* Tombol Kembali */}
-            <Link to="/riwayat" className="inline-flex items-center text-gray-500 hover:text-emerald-600 transition-colors">
-                <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Riwayat
-            </Link>
+            <button onClick={() => navigate(-1)} className="inline-flex items-center text-gray-500 hover:text-emerald-600 dark:text-slate-400 transition-colors">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Kembali
+            </button>
 
             {/* Header Detail */}
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-                <div className="p-6 border-b bg-gray-50 flex justify-between items-start">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs font-mono rounded">
-                                {complaint.ticket_id}
-                            </span>
-                            <StatusBadge status={complaint.status} />
-                            <PriorityBadge priority={complaint.priority} />
-                        </div>
-                        <h1 className="text-2xl font-bold text-gray-900">{complaint.title}</h1>
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                        <span className="font-mono bg-white dark:bg-slate-800 border dark:border-slate-600 text-gray-600 dark:text-slate-300 px-3 py-1 rounded text-xs font-bold w-fit">
+                            #{complaint.ticket_id}
+                        </span>
+                        {getStatusBadge(complaint.status)}
                     </div>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">{complaint.title}</h1>
                 </div>
 
-                <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Kolom Kiri: Info Utama */}
-                    <div className="md:col-span-2 space-y-6">
-                        {complaint.photo_url && (
-                            <div className="rounded-lg overflow-hidden border">
-                                <img src={complaint.photo_url} alt="Bukti" className="w-full h-auto object-cover max-h-96" />
+                <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="space-y-6">
+                        {/* Foto */}
+                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+                            <div className="p-3 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 font-bold text-sm text-gray-700 dark:text-slate-300 uppercase">Bukti Foto</div>
+                            <div className="aspect-video bg-gray-100 dark:bg-slate-900 flex items-center justify-center relative group">
+                                {complaint.photo_url ? (
+                                    <a href={complaint.photo_url} target="_blank" rel="noreferrer">
+                                        <img src={complaint.photo_url} alt="Bukti" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                    </a>
+                                ) : (
+                                    <div className="flex flex-col items-center text-gray-400">
+                                        <ImageIcon className="w-10 h-10 mb-2 opacity-50"/>
+                                        <span className="text-sm">Tidak ada foto</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Peta */}
+                        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+                            <div className="p-3 bg-gray-50 dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 font-bold text-sm text-gray-700 dark:text-slate-300 uppercase">Lokasi Kejadian</div>
+                            <div className="h-56 relative z-0">
+                                {complaint.latitude ? (
+                                    <MapContainer center={position} zoom={15} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+                                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                        <Marker position={position}><Popup>{complaint.location}</Popup></Marker>
+                                    </MapContainer>
+                                ) : (
+                                    <div className="h-full bg-gray-100 dark:bg-slate-900 flex items-center justify-center text-gray-400 text-sm">Peta tidak tersedia</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-8">
+                        {canEdit && (
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
+                                <h3 className="font-bold text-emerald-800 dark:text-emerald-400 flex items-center mb-4 text-lg">
+                                    <Wallet className="w-6 h-6 mr-2" /> Estimasi Biaya Perbaikan
+                                </h3>
+                                <div className="flex gap-4 items-end">
+                                    <div className="flex-1">
+                                        <label className="text-xs text-emerald-600 dark:text-emerald-500 mb-1 block font-bold uppercase tracking-wide">Input Anggaran (Rp)</label>
+                                        <input 
+                                            type="number" 
+                                            value={cost}
+                                            onChange={(e) => setCost(e.target.value)}
+                                            placeholder=""
+                                            className="w-full px-4 py-3 border border-emerald-200 dark:border-emerald-700 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white dark:bg-slate-800 dark:text-white transition-all font-mono text-lg"
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={handleSaveCost}
+                                        disabled={savingCost}
+                                        className="bg-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-emerald-700 transition-colors flex items-center shadow-lg shadow-emerald-600/20 disabled:opacity-70 h-[52px]"
+                                    >
+                                        {savingCost ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5 mr-2" /> Simpan</>}
+                                    </button>
+                                </div>
+                                {complaint.cost_amount > 0 && (
+                                    <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-800/50 flex justify-between items-center">
+                                        <span className="text-sm text-emerald-700 dark:text-emerald-500">Terbilang:</span>
+                                        <span className="text-lg font-bold text-emerald-800 dark:text-emerald-400">{formatRupiah(complaint.cost_amount)}</span>
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        <div>
-                            <h3 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
-                                <FileText className="w-4 h-4 mr-2" /> Deskripsi Laporan
-                            </h3>
-                            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                {complaint.description}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Kolom Kanan: Metadata */}
-                    <div className="space-y-4 bg-gray-50 p-4 rounded-lg h-fit">
-                        <div>
-                            <p className="text-xs text-gray-500 uppercase font-bold mb-1">Lokasi</p>
-                            <div className="flex items-start text-sm text-gray-700">
-                                <MapPin className="w-4 h-4 mr-2 mt-0.5 text-emerald-600" />
-                                {complaint.location}
+                        {/* Deskripsi & Info */}
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+                            <div className="mb-6">
+                                <span className="text-xs font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider block mb-2">Deskripsi Masalah</span>
+                                <p className="text-gray-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap text-base bg-gray-50 dark:bg-[#1a1f2c] p-4 rounded-lg border border-gray-100 dark:border-slate-700">
+                                    {complaint.description}
+                                </p>
                             </div>
-                        </div>
-                        <hr className="border-gray-200"/>
-                        <div>
-                            <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tanggal Lapor</p>
-                            <div className="flex items-center text-sm text-gray-700">
-                                <Calendar className="w-4 h-4 mr-2 text-emerald-600" />
-                                {formatDate(complaint.created_at)}
-                            </div>
-                        </div>
-                        <hr className="border-gray-200"/>
-                        <div>
-                            <p className="text-xs text-gray-500 uppercase font-bold mb-1">Pelapor</p>
-                            <div className="flex items-center text-sm text-gray-700">
-                                <User className="w-4 h-4 mr-2 text-emerald-600" />
-                                {complaint.is_anonymous ? "Anonim" : complaint.reporter_name}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Section Tanggapan / Diskusi */}
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                    <MessageSquare className="w-5 h-5 mr-2 text-emerald-600" />
-                    Aktivitas & Tanggapan
-                </h3>
-
-                <div className="space-y-6 mb-8">
-                    {responses.length === 0 ? (
-                        <p className="text-gray-500 text-center italic py-4">Belum ada tanggapan.</p>
-                    ) : (
-                        responses.map((resp) => (
-                            <div key={resp.id} className={`flex gap-4 ${resp.is_official ? 'bg-emerald-50 p-4 rounded-lg border border-emerald-100' : ''}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${resp.is_official ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                                    <User className="w-4 h-4" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-xl">
+                                    <span className="text-xs text-gray-500 uppercase font-bold block mb-1">Kategori</span>
+                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                                        <Tag className="w-3 h-3 mr-1"/> {complaint.categories?.name || 'Umum'}
+                                    </span>
                                 </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className={`font-semibold text-sm ${resp.is_official ? 'text-emerald-700' : 'text-gray-900'}`}>
-                                            {resp.responder_name}
-                                            {resp.is_official && <span className="ml-2 text-xs bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded">Petugas</span>}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                            {formatDate(resp.created_at)}
-                                        </span>
+                                <div className="bg-gray-50 dark:bg-slate-900/50 p-4 rounded-xl">
+                                    <span className="text-xs text-gray-500 uppercase font-bold block mb-1">Pelapor</span>
+                                    <div className="flex items-center text-gray-900 dark:text-white font-medium">
+                                        <User className="w-4 h-4 mr-2 text-gray-400"/>
+                                        {complaint.is_anonymous ? "Anonim" : complaint.reporter_name}
                                     </div>
-                                    <p className="text-sm text-gray-700">{resp.message}</p>
+                                    <div className="flex items-center text-gray-500 dark:text-slate-400 text-sm mt-1">
+                                        <Phone className="w-3 h-3 mr-2"/>
+                                        {complaint.is_anonymous ? "-" : complaint.reporter_contact}
+                                    </div>
                                 </div>
                             </div>
-                        ))
-                    )}
-                </div>
+                        </div>
 
-                {/* Form Balasan */}
-                <form onSubmit={handleSendResponse} className="flex gap-4 items-start border-t pt-6">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-gray-600" />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                        <textarea 
-                            rows={3}
-                            placeholder="Tulis balasan atau tambahan informasi..."
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
-                            value={newResponse}
-                            onChange={(e) => setNewResponse(e.target.value)}
+                        {/* Chat Section */}
+                        <CommentSection 
+                            comments={responses} 
+                            onAddComment={handleAddComment}
+                            currentUserRole={currentUserRole}
                         />
-                        <button 
-                            type="submit"
-                            disabled={!newResponse.trim()}
-                            className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Kirim Tanggapan
-                        </button>
+
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     );

@@ -1,47 +1,103 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './Layout';
-import Login from './Pages/Login';
-import Register from './Pages/Register'; 
+
 import Home from './Pages/Home';
+import Login from './Pages/Login';
+import Register from './Pages/Register';
 import Dashboard from './Pages/Dashboard';
 import ComplaintForm from './Pages/ComplaintForm';
-import MyComplaints from './Pages/MyComplaints';
-import ComplaintDetail from './Pages/ComplaintDetail';
 import ComplaintManagement from './Pages/ComplaintManagement';
-import Notifications from './Pages/Notifications';
 import CategoryManagement from './Pages/CategoryManagement';
 import UserManagement from './Pages/UserManagement';
+import FinancialManagement from './Pages/FinancialManagement';
+import FinanceCategory from './Pages/FinanceCategory';
 import Profile from './Pages/Profile';
-import Settings from './Pages/Settings';
+import ComplaintDetail from './Pages/ComplaintDetail';
+import { Toaster } from 'react-hot-toast';
 
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} /> 
-        <Route path="/" element={<Layout />}>
-          
-          <Route index element={<Home />} />
+const ProtectedRoute = ({ children, allowedRoles }) => {
+    let user = null;
 
-          <Route path="lapor" element={<ComplaintForm />} />
-          <Route path="riwayat" element={<MyComplaints />} />
-          <Route path="aduan/:id" element={<ComplaintDetail />} />
+    try {
+        user = JSON.parse(localStorage.getItem('user_session'));
+    } catch {
+        return <Navigate to="/login" replace />;
+    }
 
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="kelola-aduan" element={<ComplaintManagement />} />
-          <Route path="kategori" element={<CategoryManagement />} />
-          <Route path="pengguna" element={<UserManagement />} />
-          
-          <Route path="notifikasi" element={<Notifications />} />
-          <Route path="profil" element={<Profile />} />
-          <Route path="pengaturan" element={<Settings />} />
+    if (!user) return <Navigate to="/login" replace />;
 
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
+    if (!allowedRoles.includes(user.role)) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    return children;
+};
+
+export default function App() {
+    return (
+        <Router>
+            <Toaster position="top-right" />
+
+            <Routes>
+                <Route element={<Layout />}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/lapor" element={<ComplaintForm />} />
+                </Route>
+
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+
+                <Route element={<Layout />}>
+                    <Route path="/dashboard" element={
+                        <ProtectedRoute allowedRoles={['admin','petugas','bendahara']}>
+                            <Dashboard />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/laporan/:id" element={
+                        <ProtectedRoute allowedRoles={['admin','petugas','bendahara']}>
+                            <ComplaintDetail />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/profil" element={
+                        <ProtectedRoute allowedRoles={['admin','petugas','bendahara']}>
+                            <Profile />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/kelola" element={
+                        <ProtectedRoute allowedRoles={['admin','petugas']}>
+                            <ComplaintManagement />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/kategori" element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <CategoryManagement />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/keuangan" element={
+                        <ProtectedRoute allowedRoles={['admin','bendahara']}>
+                            <FinancialManagement />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/kategori-keuangan" element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <FinanceCategory />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/pengguna" element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                            <UserManagement />
+                        </ProtectedRoute>
+                    } />
+                </Route>
+            </Routes>
+        </Router>
+    );
 }
-
-export default App;

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    Plus, Trash2, Edit3, Search, Loader2, Palette,
-    Square, CheckSquare, ChevronLeft, ChevronRight, ChevronRight as BreadcrumbIcon
+    Plus, Trash2, Edit3, Search, Loader2, X, 
+    ArrowUpCircle, ArrowDownCircle, Square, CheckSquare, ChevronLeft, ChevronRight, ChevronRight as BreadcrumbIcon
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
 
-export default function CategoryManagement() {
+export default function FinanceCategory() {
     const [loading, setLoading] = useState(true);
     const [categories, setCategories] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -14,19 +14,9 @@ export default function CategoryManagement() {
     const [viewMode, setViewMode] = useState('list'); // 'list', 'create', 'edit'
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [formData, setFormData] = useState({ id: null, name: '', color: 'bg-emerald-500' });
+    const [formData, setFormData] = useState({ id: null, name: '', type: 'income' });
     const [isEditing, setIsEditing] = useState(false);
     const [selectedIds, setSelectedIds] = useState([]);
-    const colorOptions = [
-        { name: 'Emerald (Hijau)', value: 'bg-emerald-500' },
-        { name: 'Blue (Biru)', value: 'bg-blue-500' },
-        { name: 'Purple (Ungu)', value: 'bg-purple-500' },
-        { name: 'Red (Merah)', value: 'bg-red-500' },
-        { name: 'Yellow (Kuning)', value: 'bg-yellow-500' },
-        { name: 'Gray (Abu-abu)', value: 'bg-gray-500' },
-        { name: 'Orange (Jingga)', value: 'bg-orange-500' },
-        { name: 'Pink (Merah Muda)', value: 'bg-pink-500' },
-    ];
 
     useEffect(() => {
         fetchCategories();
@@ -36,68 +26,69 @@ export default function CategoryManagement() {
         try {
             setLoading(true);
             const { data, error } = await supabase
-                .from('categories')
+                .from('finance_categories')
                 .select('*')
-                .order('id', { ascending: true });
+                .order('created_at', { ascending: false });
             
             if (error) throw error;
             setCategories(data || []);
         } catch (error) {
-            console.error("Error:", error);
-            toast.error("Gagal memuat kategori!");
+            console.error('Error:', error);
         } finally {
             setLoading(false);
         }
     };
 
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('id-ID', {
+            day: '2-digit', month: 'short', year: 'numeric'
+        });
+    };
+
     const handleSubmit = async (e, createAnother = false) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
+    if (!formData.name) {
         toast.error("Nama kategori wajib diisi!");
         return;
     }
 
-    setSubmitting(true);
-    const slug = formData.name.toLowerCase().replace(/ /g, '-');
-
     try {
+        setSubmitting(true);
         let actionText = "";
 
         if (isEditing) {
             const { error } = await supabase
-                .from('categories')
-                .update({ name: formData.name, slug: slug, color: formData.color })
+                .from('finance_categories')
+                .update({ name: formData.name, type: formData.type })
                 .eq('id', formData.id);
 
             if (error) throw error;
             actionText = "diperbarui";
         } else {
             const { error } = await supabase
-                .from('categories')
-                .insert([{ name: formData.name, slug: slug, color: formData.color }]);
+                .from('finance_categories')
+                .insert([{ name: formData.name, type: formData.type }]);
 
             if (error) throw error;
             actionText = "ditambahkan";
         }
 
-        toast.success(`Kategori laporan berhasil ${actionText}!`);
+        toast.success(`Kategori berhasil ${actionText}!`);
         fetchCategories();
 
         if (createAnother && !isEditing) {
-            setFormData({ id: null, name: '', color: 'bg-emerald-500' });
+            setFormData({ id: null, name: '', type: 'income' });
         } else {
             backToList();
         }
 
     } catch (error) {
-        console.error(error);
-        toast.error("Gagal menyimpan kategori!");
+        toast.error("Gagal: " + error.message);
     } finally {
         setSubmitting(false);
     }
 };
-
 
     const handleDelete = async (id) => {
     const confirmed = await new Promise((resolve) => {
@@ -131,10 +122,14 @@ export default function CategoryManagement() {
     if (!confirmed) return;
 
     try {
-        const { error } = await supabase.from('categories').delete().eq('id', id);
+        const { error } = await supabase
+            .from('finance_categories')
+            .delete()
+            .eq('id', id);
+
         if (error) throw error;
 
-        setCategories(categories.filter(c => c.id !== id));
+        fetchCategories();
         toast.success("Kategori berhasil dihapus!");
     } catch (error) {
         console.error(error);
@@ -142,26 +137,21 @@ export default function CategoryManagement() {
     }
 };
 
-
     const openCreate = () => {
-        setFormData({ id: null, name: '', color: 'bg-emerald-500' });
+        setFormData({ id: null, name: '', type: 'income' });
         setIsEditing(false);
         setViewMode('create');
     };
 
     const openEdit = (category) => {
-        setFormData({
-            id: category.id,
-            name: category.name,
-            color: category.color || 'bg-emerald-500'
-        });
+        setFormData(category);
         setIsEditing(true);
         setViewMode('edit');
     };
 
     const backToList = () => {
         setViewMode('list');
-        setFormData({ id: null, name: '', color: 'bg-emerald-500' });
+        setFormData({ id: null, name: '', type: 'income' });
         setIsEditing(false);
     };
 
@@ -190,20 +180,20 @@ export default function CategoryManagement() {
         }
     };
 
-    if (loading && viewMode === 'list') return <div className="p-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-emerald-600"/></div>;
+    if (loading && viewMode === 'list') return <div className="flex justify-center p-10"><Loader2 className="w-8 h-8 animate-spin text-emerald-600"/></div>;
     if (viewMode === 'create' || viewMode === 'edit') {
         return (
             <div className="space-y-6 pb-20 animate-in fade-in duration-200">
                 {/* Breadcrumb */}
                 <div className="flex items-center text-sm text-gray-500 dark:text-slate-400">
-                    <button onClick={backToList} className="hover:text-blue-500">Kategori Laporan</button>
+                    <button onClick={backToList} className="hover:text-blue-500">Daftar Kategori</button>
                     <BreadcrumbIcon className="w-4 h-4 mx-2" />
                     <span className="font-medium text-gray-900 dark:text-white">{isEditing ? 'Edit' : 'Create'}</span>
                 </div>
 
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {isEditing ? 'Edit Kategori Laporan' : 'Create Kategori Laporan'}
+                        {isEditing ? 'Edit Kategori' : 'Create Kategori'}
                     </h1>
                 </div>
                 
@@ -224,31 +214,22 @@ export default function CategoryManagement() {
                             />
                         </div>
 
-                        {/* Warna Label (Dropdown) */}
+                        {/* Tipe Kategori (Dropdown) */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                                Warna Label <span className="text-red-500">*</span>
+                                Tipe <span className="text-red-500">*</span>
                             </label>
-                            <div className="relative">
-                                <select
-                                    className="w-full pl-4 pr-10 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer appearance-none"
-                                    value={formData.color}
-                                    onChange={(e) => setFormData({...formData, color: e.target.value})}
-                                >
-                                    {colorOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                {/* Preview Warna di dalam select */}
-                                <div className={`absolute right-10 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full ${formData.color}`}></div>
-                                <Palette className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            </div>
+                            <select
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all cursor-pointer appearance-none"
+                                value={formData.type}
+                                onChange={(e) => setFormData({...formData, type: e.target.value})}
+                                style={{ backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23999%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '.75em' }}
+                            >
+                                <option value="income">Pemasukan</option>
+                                <option value="expense">Pengeluaran</option>
+                            </select>
                         </div>
                     </div>
-
-                    {/* Tombol Aksi */}
                     <div className="flex flex-wrap gap-3 pt-4">
                         <button 
                             onClick={(e) => handleSubmit(e, false)}
@@ -285,8 +266,8 @@ export default function CategoryManagement() {
         <div className="space-y-6 pb-20 animate-in fade-in duration-200">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Kategori Laporan</h1>
-                    <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Kelola jenis kategori untuk pengaduan masyarakat.</p>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Daftar Kategori</h1>
+                    <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">Kelola data kategori pemasukan dan pengeluaran.</p>
                 </div>
                 <button 
                     onClick={openCreate} 
@@ -295,7 +276,6 @@ export default function CategoryManagement() {
                     <Plus className="w-5 h-5 mr-2" /> New Kategori
                 </button>
             </div>
-
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50">
                     <div className="relative max-w-sm ml-auto">
@@ -309,8 +289,6 @@ export default function CategoryManagement() {
                         />
                     </div>
                 </div>
-
-                {/* TABEL DATA */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-gray-500 dark:text-slate-400 bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700 uppercase text-xs font-bold tracking-wider">
@@ -325,8 +303,8 @@ export default function CategoryManagement() {
                                     </button>
                                 </th>
                                 <th className="p-4">Nama Kategori</th>
-                                <th className="p-4">Slug URL</th>
-                                <th className="p-4">Warna Label</th>
+                                <th className="p-4">Tipe</th>
+                                <th className="p-4">Dibuat Pada</th>
                                 <th className="p-4 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -345,13 +323,19 @@ export default function CategoryManagement() {
                                     <td className="p-4 font-medium text-gray-900 dark:text-white text-base">
                                         {cat.name}
                                     </td>
-                                    <td className="p-4 text-gray-500 dark:text-slate-400 font-mono text-xs">
-                                        /{cat.slug}
-                                    </td>
                                     <td className="p-4">
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold text-white ${cat.color || 'bg-gray-500'}`}>
-                                            {cat.name}
-                                        </span>
+                                        {cat.type === 'income' ? (
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                                Pemasukan
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20">
+                                                Pengeluaran
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="p-4 text-gray-500 dark:text-slate-400 font-medium">
+                                        {formatDate(cat.created_at)}
                                     </td>
                                     <td className="p-4 text-right">
                                         <div className="flex items-center justify-end gap-4">
@@ -374,7 +358,7 @@ export default function CategoryManagement() {
                             {currentItems.length === 0 && (
                                 <tr>
                                     <td colSpan="5" className="p-8 text-center text-gray-500 dark:text-slate-400 italic">
-                                        Tidak ada kategori ditemukan.
+                                        Tidak ada data ditemukan.
                                     </td>
                                 </tr>
                             )}

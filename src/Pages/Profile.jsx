@@ -1,177 +1,293 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Save, Loader2, Shield, CheckCircle2, Edit3, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
+import { 
+    User, Mail, Phone, MapPin, Loader2, AlertCircle, Camera, LogOut, 
+    ChevronRight as BreadcrumbIcon, Upload, X, Save
+} from 'lucide-react';
 
 export default function Profile() {
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [success, setSuccess] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [originalData, setOriginalData] = useState({});
+    const [updating, setUpdating] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false); 
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
+    const [user, setUser] = useState(null);
+    const [editMode, setEditMode] = useState(false);
     const [formData, setFormData] = useState({
-        id: '', full_name: '', email: '', nik: '', no_hp: '', alamat: '', role: ''
+        full_name: '', no_hp: '', nik: '', alamat: '', avatar_url: null
     });
 
-    useEffect(() => { fetchUserProfile(); }, []);
+    const [userId, setUserId] = useState(null);
 
-    const fetchUserProfile = async () => {
-        try {
-            const session = JSON.parse(localStorage.getItem('user_session'));
-            if (!session) return;
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                setLoading(true);
+                const sessionUser = JSON.parse(localStorage.getItem('user_session'));
+                if (!sessionUser || !sessionUser.id) {
+                    navigate('/login');
+                    return;
+                }
+                setUserId(sessionUser.id);
 
-            const { data, error } = await supabase.from('users').select('*').eq('id', session.id).single();
-            if (error) throw error;
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', sessionUser.id)
+                    .single();
 
-            if (data) {
-                setFormData(data);
-                setOriginalData(data);
+                if (error) throw error;
+                
+                setUser(data);
+                setFormData({
+                    full_name: data.full_name || '',
+                    no_hp: data.no_hp || '',
+                    nik: data.nik || '',
+                    alamat: data.alamat || '',
+                    avatar_url: data.avatar_url
+                });
+
+            } catch (err) {
+                console.error("Error:", err);
+                setError("Gagal memuat data profil.");
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error("Gagal ambil profil:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
+        fetchUserData();
+    }, [navigate]);
+    const handleImageUpload = async (event) => {
+        try {
+            setUploadingImage(true);
+            const file = event.target.files[0];
+            if (!file) return;
 
-    const handleCancel = () => {
-        setFormData(originalData); 
-        setIsEditing(false); 
-    };
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${userId}-${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file);
 
-    const handleSave = async (e) => {
+            if (uploadError) throw uploadError;
+            const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+            const publicUrl = data.publicUrl;
+            setFormData({ ...formData, avatar_url: publicUrl });
+
+                } catch (error) {
+                    alert('Gagal upload gambar: ' + error.message);
+                } finally {
+                    setUploadingImage(false);
+                }
+            };
+
+    const handleUpdateProfile = async (e) => {
         e.preventDefault();
-        setSaving(true);
-        setSuccess(false);
+        setError('');
+        setSuccess('');
+        setUpdating(true);
 
         try {
-            const { error } = await supabase
+            const { error: updateError } = await supabase
                 .from('users')
                 .update({
                     full_name: formData.full_name,
                     no_hp: formData.no_hp,
-                    alamat: formData.alamat
+                    alamat: formData.alamat,
+                    avatar_url: formData.avatar_url 
                 })
-                .eq('id', formData.id);
+                .eq('id', userId);
 
-            if (error) throw error;
-            const currentSession = JSON.parse(localStorage.getItem('user_session'));
-            const updatedSession = { ...currentSession, ...formData };
-            localStorage.setItem('user_session', JSON.stringify(updatedSession));
-            setOriginalData(formData);
+            if (updateError) throw updateError;
 
-            setSuccess(true);
-            setIsEditing(false);
-            setTimeout(() => setSuccess(false), 3000);
+            const updatedUser = { ...user, ...formData };
+            setUser(updatedUser);
+            localStorage.setItem('user_session', JSON.stringify(updatedUser));
+            
+            setSuccess('Profil berhasil diperbarui!');
+            window.dispatchEvent(new Event('userSessionUpdated')); 
+            
+            setTimeout(() => {
+                setSuccess('');
+                setEditMode(false);
+            }, 1500);
 
-        } catch (error) {
-            alert("Gagal menyimpan: " + error.message);
+        } catch (err) {
+            setError(err.message);
         } finally {
-            setSaving(false);
+            setUpdating(false);
         }
     };
 
-    if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 animate-spin text-emerald-600" /></div>;
+    const handleLogout = () => {
+        if(window.confirm("Apakah Anda yakin ingin keluar?")) {
+            localStorage.removeItem('user_session');
+            navigate('/login');
+        }
+    };
 
-    return (
-        <div className="max-w-3xl mx-auto space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profil Saya</h1>
-                <p className="text-gray-600 dark:text-slate-400 mt-1">Kelola informasi pribadi dan kontak Anda</p>
-            </div>
-
-            {success && (
-                <div className="bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-400 p-4 rounded-xl flex items-center animate-in slide-in-from-top-2">
-                    <CheckCircle2 className="w-5 h-5 mr-2" /> Data profil berhasil diperbarui!
+    if (loading) return <div className="flex justify-center items-center h-96"><Loader2 className="w-10 h-10 animate-spin text-emerald-600" /></div>;
+    if (editMode) {
+        return (
+            <div className="space-y-6 pb-20 animate-in fade-in duration-300">
+                {/* Breadcrumb */}
+                <div className="flex items-center text-sm text-gray-500 dark:text-slate-400 mb-4">
+                    <button onClick={() => setEditMode(false)} className="hover:text-emerald-500 transition-colors">Profil Saya</button>
+                    <BreadcrumbIcon className="w-4 h-4 mx-2 text-gray-400" />
+                    <span className="font-medium text-gray-900 dark:text-white">Edit Profil</span>
                 </div>
-            )}
 
-            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                
-                {/* HEADER PROFIL */}
-                <div className="p-8 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                        <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg">
-                            {formData.full_name?.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="text-center md:text-left">
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{formData.full_name}</h2>
-                            <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-500 dark:text-slate-400 text-sm">
-                                <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded font-medium capitalize border border-blue-200 dark:border-blue-800">
-                                    {formData.role}
-                                </span>
+                <div className="border-b border-gray-200 dark:border-slate-700 pb-4 mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Edit Profil</h1>
+                </div>
+
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm">
+                    <form onSubmit={handleUpdateProfile} className="space-y-8">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-4">Foto Profil</label>
+                            <div className="flex items-center gap-6">
+                                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-gray-300 dark:border-slate-600 flex-shrink-0 bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+                                    {uploadingImage ? (
+                                        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                                    ) : formData.avatar_url ? (
+                                        <img src={formData.avatar_url} alt="Preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-10 h-10 text-gray-400" />
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors font-medium text-sm">
+                                        <Upload className="w-4 h-4 mr-2" /> Upload Foto
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+                                    </label>
+                                    <p className="text-xs text-gray-500 dark:text-slate-500 mt-2">Format: JPG, PNG. Maksimal 2MB.</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {!isEditing ? (
-                        <button 
-                            onClick={() => setIsEditing(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-700 dark:text-slate-200 font-medium hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors shadow-sm"
-                        >
-                            <Edit3 className="w-4 h-4" /> Edit Profil
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={handleCancel}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 font-medium hover:bg-red-100 transition-colors"
-                        >
-                            <X className="w-4 h-4" /> Batal
-                        </button>
-                    )}
-                </div>
 
-                <form onSubmit={handleSave} className="p-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2"><User className="w-4 h-4" /> Nama Lengkap</label>
-                            <input 
-                                type="text" value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})} 
-                                // Logika Disabled
-                                disabled={!isEditing}
-                                className={`w-full px-4 py-2.5 border rounded-lg outline-none transition-all ${isEditing ? 'bg-white dark:bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/20' : 'bg-gray-100 dark:bg-slate-700 border-transparent cursor-not-allowed text-gray-500 dark:text-slate-400'}`}
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Nama Lengkap</label>
+                                <input 
+                                    type="text" required
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                                    value={formData.full_name}
+                                    onChange={e => setFormData({...formData, full_name: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Email (Read Only)</label>
+                                <input 
+                                    type="email" disabled
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-200 dark:bg-slate-900 text-gray-500 cursor-not-allowed"
+                                    value={user.email}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">No. Handphone</label>
+                                <input 
+                                    type="text" required
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+                                    value={formData.no_hp}
+                                    onChange={e => setFormData({...formData, no_hp: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">NIK / ID</label>
+                                <input 
+                                    type="text" disabled
+                                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-200 dark:bg-slate-900 text-gray-500 cursor-not-allowed"
+                                    value={formData.nik || '-'}
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2"><Shield className="w-4 h-4" /> NIK</label>
-                            <input type="text" value={formData.nik || '-'} disabled className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-500 cursor-not-allowed" title="Tidak dapat diubah"/>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Alamat Lengkap</label>
+                            <textarea 
+                                rows="3"
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none resize-none transition-all"
+                                value={formData.alamat}
+                                onChange={e => setFormData({...formData, alamat: e.target.value})}
+                            ></textarea>
                         </div>
-                    </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2"><Mail className="w-4 h-4" /> Email</label>
-                        <input type="email" value={formData.email} disabled className="w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-500 cursor-not-allowed" title="Tidak dapat diubah" />
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2"><Phone className="w-4 h-4" /> Nomor HP / WhatsApp</label>
-                        <input 
-                            type="tel" value={formData.no_hp || ''} onChange={(e) => setFormData({...formData, no_hp: e.target.value})} 
-                            disabled={!isEditing}
-                            className={`w-full px-4 py-2.5 border rounded-lg outline-none transition-all ${isEditing ? 'bg-white dark:bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/20' : 'bg-gray-100 dark:bg-slate-700 border-transparent cursor-not-allowed text-gray-500 dark:text-slate-400'}`}
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2"><MapPin className="w-4 h-4" /> Alamat Lengkap</label>
-                        <textarea 
-                            rows={3} value={formData.alamat || ''} onChange={(e) => setFormData({...formData, alamat: e.target.value})} 
-                            disabled={!isEditing}
-                            className={`w-full px-4 py-2.5 border rounded-lg outline-none transition-all resize-none ${isEditing ? 'bg-white dark:bg-slate-900 border-emerald-500 ring-2 ring-emerald-500/20' : 'bg-gray-100 dark:bg-slate-700 border-transparent cursor-not-allowed text-gray-500 dark:text-slate-400'}`}
-                        />
-                    </div>
-
-                    {isEditing && (
-                        <div className="pt-4 border-t border-gray-100 dark:border-slate-700 flex justify-end animate-in slide-in-from-bottom-2">
+                        <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-slate-700">
                             <button 
                                 type="submit" 
-                                disabled={saving}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl flex items-center font-bold transition-all shadow-lg shadow-emerald-500/30 hover:-translate-y-1 disabled:opacity-70 disabled:transform-none"
+                                disabled={updating || uploadingImage}
+                                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all flex items-center justify-center shadow-lg shadow-emerald-500/20 disabled:opacity-70"
                             >
-                                {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
-                                Simpan Perubahan
+                                {updating ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2"/> Simpan Perubahan</>}
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => setEditMode(false)}
+                                className="px-6 py-2.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 font-bold rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-all"
+                            >
+                                Batal
                             </button>
                         </div>
-                    )}
-                </form>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-5xl mx-auto space-y-8 pb-20 animate-in fade-in duration-300">
+            <div className="flex justify-between items-end">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profil Saya</h1>
+                    <p className="text-gray-600 dark:text-slate-400 mt-1">Informasi data diri Anda.</p>
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={() => setEditMode(true)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium transition-colors shadow-lg shadow-emerald-600/20">
+                        Edit Profil
+                    </button>
+                    <button onClick={handleLogout} className="px-4 py-2 bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 rounded-lg hover:bg-red-100 font-medium flex items-center transition-colors">
+                        <LogOut className="w-4 h-4 mr-2" /> Keluar
+                    </button>
+                </div>
+            </div>
+            
+            {success && <div className="bg-emerald-100 text-emerald-700 p-4 rounded-lg flex items-center"><User className="w-5 h-5 mr-2"/> {success}</div>}
+            {error && <div className="bg-red-100 text-red-700 p-4 rounded-lg flex items-center"><AlertCircle className="w-5 h-5 mr-2"/>{error}</div>}
+
+            <div className="space-y-6">
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-center gap-6">
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-emerald-100 dark:border-emerald-900 bg-gray-100 dark:bg-slate-700 flex items-center justify-center shadow-inner">
+                        {user.avatar_url ? (
+                            <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                        ) : (
+                            <User className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+                        )}
+                    </div>
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{user.full_name}</h2>
+                        <span className="inline-block mt-2 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold uppercase tracking-wider rounded-full">
+                            {user.role}
+                        </span>
+                        {user.nik && user.nik !== '-' && <p className="text-gray-500 dark:text-slate-400 mt-1 text-sm font-mono">ID: {user.nik}</p>}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow">
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl"><MapPin className="w-6 h-6" /></div>
+                        <div><h3 className="font-bold text-gray-900 dark:text-white mb-1">Alamat</h3><p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed">{user.alamat || '-'}</p></div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow">
+                        <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl"><Phone className="w-6 h-6" /></div>
+                        <div><h3 className="font-bold text-gray-900 dark:text-white mb-1">Telepon</h3><p className="text-gray-600 dark:text-slate-400 text-sm">{user.no_hp || '-'}</p></div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm flex items-start gap-4 hover:shadow-md transition-shadow">
+                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-xl"><Mail className="w-6 h-6" /></div>
+                        <div><h3 className="font-bold text-gray-900 dark:text-white mb-1">Email</h3><p className="text-gray-600 dark:text-slate-400 text-sm break-all">{user.email}</p></div>
+                    </div>
+                </div>
             </div>
         </div>
     );

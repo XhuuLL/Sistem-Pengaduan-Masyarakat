@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, User, Mail, ShieldAlert, Loader2, Phone, KeyRound, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { 
+    Lock, User, Mail, ShieldAlert, Loader2, Phone, KeyRound, 
+    AlertCircle, CheckCircle2, Sun, Moon, ArrowLeft 
+} from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 export default function Register() {
@@ -8,12 +11,22 @@ export default function Register() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
-    
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+
     const [formData, setFormData] = useState({
         full_name: '', email: '', password: '', confirmPassword: '', no_hp: '', secret_code: ''
     });
 
     const KODE_RAHASIA = 'CIPELEM2025';
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [darkMode]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -49,96 +62,189 @@ export default function Register() {
 
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-emerald-50 dark:bg-slate-900 p-4">
-                <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl text-center max-w-md w-full border border-emerald-100 dark:border-slate-700">
-                    <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle2 className="w-8 h-8" />
+            <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900 p-4 transition-colors duration-300">
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-2xl text-center max-w-md w-full border border-gray-100 dark:border-slate-700 animate-in zoom-in duration-300">
+                    <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/20">
+                        <CheckCircle2 className="w-10 h-10" />
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Pendaftaran Berhasil!</h2>
-                    <p className="text-gray-600 dark:text-slate-400 mb-6">Akun petugas Anda telah dibuat. Silakan login untuk melanjutkan.</p>
-                    <p className="text-sm text-emerald-600 dark:text-emerald-400 animate-pulse">Mengalihkan ke halaman login...</p>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Pendaftaran Berhasil!</h2>
+                    <p className="text-gray-600 dark:text-slate-400 mb-8 text-lg">Akun petugas Anda telah dibuat. Silakan login untuk melanjutkan.</p>
+                    <div className="flex justify-center">
+                        <Loader2 className="w-6 h-6 text-emerald-600 animate-spin mr-2" />
+                        <span className="text-emerald-600 font-medium">Mengalihkan ke halaman login...</span>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 p-4 py-10 transition-colors duration-300">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                
-                <div className="bg-emerald-600 dark:bg-emerald-700 p-6 text-center">
-                    <h2 className="text-2xl font-bold text-white">Daftar Petugas Baru</h2>
-                    <p className="text-emerald-100 text-sm">Bergabung dengan tim pelayanan Desa</p>
+        <div className="min-h-screen flex bg-white dark:bg-slate-900 transition-colors duration-300">
+            <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 z-0">
+                    <img 
+                        src="/balaidesa.jpg" 
+                        alt="Background" 
+                        className="w-full h-full object-cover opacity-40 mix-blend-overlay"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/90 to-slate-900/90"></div>
                 </div>
+                
+                <div className="relative z-10 text-center px-10">
+                    <img 
+                        src="/Brebes.svg" 
+                        alt="Logo Brebes" 
+                        className="w-32 h-32 object-contain mx-auto mb-8 animate-in zoom-in duration-500 drop-shadow-2xl" 
+                    />
+                    <h1 className="text-5xl font-black text-white mb-4 tracking-tight">SIGAP</h1>
+                    <p className="text-emerald-200 text-xl font-medium tracking-wide uppercase">Sistem Informasi Gangguan & <br/> Anggaran Pembangunan</p>
+                    <div className="mt-12 w-24 h-1 bg-emerald-500 mx-auto rounded-full"></div>
+                </div>
+            </div>
 
-                <div className="p-8">
-                    <form onSubmit={handleRegister} className="space-y-4">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 overflow-y-auto relative">
+                <button 
+                    onClick={() => setDarkMode(!darkMode)}
+                    className="absolute top-6 right-6 p-3 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-yellow-400 hover:scale-110 transition-all z-20"
+                    title="Ganti Tema"
+                >
+                    {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                </button>
+
+                <div className="w-full max-w-lg space-y-8 animate-in slide-in-from-right duration-500 py-10">
+                    <div className="lg:hidden text-center mb-8">
+                        <img src="/Brebes.svg" alt="Logo Brebes" className="w-20 h-20 object-contain mx-auto mb-4 drop-shadow-lg" />
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white">SIGAP</h2>
+                    </div>
+
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Daftar Petugas</h2>
+                        <p className="text-gray-500 dark:text-slate-400 mt-2">Bergabung dengan tim pelayanan Desa.</p>
+                    </div>
+
+                    <form onSubmit={handleRegister} className="space-y-5">
+                        
                         {error && (
-                            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg flex items-start gap-2 border border-red-200 dark:border-red-800">
-                                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>{error}</span>
+                            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl flex items-start gap-3 border border-red-200 dark:border-red-800 text-sm animate-pulse">
+                                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                <span>{error}</span>
                             </div>
                         )}
 
-                        {/* Input Groups */}
-                        <div className="space-y-1">
-                            <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Nama Lengkap</label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
-                                <input name="full_name" required className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Nama Petugas" onChange={handleChange} />
+                        {/* Nama Lengkap */}
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Nama Lengkap</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <User className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                                </div>
+                                <input 
+                                    name="full_name" required 
+                                    className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all" 
+                                    placeholder="Nama Sesuai KTP" 
+                                    onChange={handleChange} 
+                                />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Email</label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
-                                    <input type="email" name="email" required className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" placeholder="email@desa.id" onChange={handleChange} />
+                        {/* Grid: Email & HP */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Email</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                                    </div>
+                                    <input 
+                                        type="email" name="email" required 
+                                        className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" 
+                                        placeholder="Masukkan email Anda" 
+                                        onChange={handleChange} 
+                                    />
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium text-gray-700 dark:text-slate-300">No. HP</label>
-                                <div className="relative">
-                                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
-                                    <input name="no_hp" required className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" placeholder="08xxx" onChange={handleChange} />
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">No. HP</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Phone className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                                    </div>
+                                    <input 
+                                        name="no_hp" required 
+                                        className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" 
+                                        placeholder="08xxx" 
+                                        onChange={handleChange} 
+                                    />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Kata Sandi</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
-                                    <input type="password" name="password" required className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" placeholder="******" onChange={handleChange} />
+                        {/* Grid: Password & Confirm */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Kata Sandi</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                                    </div>
+                                    <input 
+                                        type="password" name="password" required 
+                                        className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" 
+                                        placeholder="******" 
+                                        onChange={handleChange} 
+                                    />
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Ulangi Sandi</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" />
-                                    <input type="password" name="confirmPassword" required className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500" placeholder="******" onChange={handleChange} />
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-2">Ulangi Sandi</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                                    </div>
+                                    <input 
+                                        type="password" name="confirmPassword" required 
+                                        className="w-full pl-12 pr-4 py-3.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-[#1a1f2c] text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" 
+                                        placeholder="******" 
+                                        onChange={handleChange} 
+                                    />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-1 pt-2">
-                            <label className="text-sm font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-1"><KeyRound className="w-4 h-4" /> Kode Registrasi Desa</label>
-                            <div className="relative">
-                                <ShieldAlert className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-600 dark:text-emerald-500" />
-                                <input name="secret_code" required className="w-full pl-10 pr-4 py-2 border-2 border-emerald-100 dark:border-emerald-900 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50/50 dark:bg-emerald-900/20 placeholder-emerald-300 dark:placeholder-emerald-700 text-gray-900 dark:text-white" placeholder="Kode Rahasia" onChange={handleChange} />
+                        {/* Kode Rahasia */}
+                        <div>
+                            <label className="flex items-center text-sm font-bold text-emerald-700 dark:text-emerald-400 mb-2">
+                                <KeyRound className="w-4 h-4 mr-1" /> Kode Registrasi Desa
+                            </label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <ShieldAlert className="h-5 w-5 text-emerald-600 dark:text-emerald-500" />
+                                </div>
+                                <input 
+                                    name="secret_code" required 
+                                    className="w-full pl-12 pr-4 py-3.5 border-2 border-emerald-100 dark:border-emerald-900 rounded-xl bg-emerald-50/50 dark:bg-emerald-900/20 text-gray-900 dark:text-white placeholder-emerald-400/70 focus:ring-2 focus:ring-emerald-500 outline-none transition-all" 
+                                    placeholder="Masukkan Kode Rahasia" 
+                                    onChange={handleChange} 
+                                />
                             </div>
                         </div>
 
-                        <button type="submit" disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center disabled:opacity-70 mt-4">
-                            {loading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : "Daftar Sekarang"}
+                        <button 
+                            type="submit" 
+                            disabled={loading} 
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed transform active:scale-95 duration-200 mt-6"
+                        >
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Daftar Sekarang"}
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center pt-4 border-t border-gray-100 dark:border-slate-700">
-                        <p className="text-sm text-gray-600 dark:text-slate-400">
+                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 text-center">
+                        <p className="text-sm text-gray-600 dark:text-slate-400 mb-4">
                             Sudah punya akun? <Link to="/login" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Login di sini</Link>
                         </p>
+                        <Link to="/" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 transition-colors">
+                            <ArrowLeft className="w-4 h-4 mr-1" /> Kembali ke Beranda
+                        </Link>
                     </div>
                 </div>
             </div>

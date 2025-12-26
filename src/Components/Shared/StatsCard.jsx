@@ -4,14 +4,14 @@ import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 export default function StatsCard({ 
     title, 
     value, 
-    icon: Icon, // Kita rename jadi Icon (Huruf Besar) biar dianggap komponen
+    icon: Icon, 
     color = 'emerald',
     trend,
     trendValue,
     subtitle 
 }) {
     
-    // Mapping warna sederhana
+    
     const colorMap = {
         emerald: 'text-emerald-600 bg-emerald-100',
         blue: 'text-blue-600 bg-blue-100',
@@ -21,11 +21,11 @@ export default function StatsCard({
         green: 'text-green-600 bg-green-100',
     };
 
-    // Pilih warna, default ke emerald kalau tidak ketemu
+    
     const activeColorClass = colorMap[color] || colorMap.emerald;
 
     return (
-        // Ganti <Card> dengan <div> biasa biar tidak perlu install library tambahan
+        
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-shadow p-6">
             
             <div className="flex items-start justify-between">
@@ -47,9 +47,7 @@ export default function StatsCard({
                     )}
                 </div>
                 
-                {/* Bagian Icon */}
                 <div className={`p-3 rounded-xl ${activeColorClass}`}>
-                    {/* Kita render Icon di sini */}
                     {Icon && <Icon className="w-6 h-6" />}
                 </div>
             </div>

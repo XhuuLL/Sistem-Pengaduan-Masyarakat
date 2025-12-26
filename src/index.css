@@ -1,3 +1,37 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* --- TAMBAHAN KODE DI BAWAH INI --- */
+
+/* 1. Animasi Marquee untuk Running Text */
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+  display: flex;
+  min-width: 100%;
+}
+
+/* 2. Scrollbar Rapi (Support Dark Mode) */
+/* Chrome, Edge, Safari */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* Warna terang (Slate-300) */
+  border-radius: 20px;
+}
+
+/* Warna scrollbar saat mode gelap */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #475569; /* Warna gelap (Slate-600) */
+}
