@@ -73,8 +73,9 @@ Gunakan akun berikut untuk masuk ke halaman Admin/Dashboard:
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| **Admin** | `admin@cipelem.desa.id` | `admin123` |
-| **Petugas** | `petugas@cipelem.desa.id` | `petugas123` |
+| **Admin** | `fatkhul@gmail.com` | `admin123` |
+| **Petugas** | `petugas@gmail.com` | `petugas123` |
+| **Bendahara** | `bendahara@gmail.com` | `bendahara123` |
 
 ---
 
