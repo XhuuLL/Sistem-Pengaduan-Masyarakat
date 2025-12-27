@@ -4,6 +4,7 @@ import {
     ChevronRight as BreadcrumbIcon, Save, X, Edit3, Phone, Calendar, Mail 
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { toast } from 'react-hot-toast';
 
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
@@ -38,59 +39,62 @@ export default function UserManagement() {
         }
     };
     const handleSubmit = async (e, createAnother = false) => {
-        e.preventDefault();
-        
-        if (!formData.email || (!formData.password && viewMode === 'create')) {
-            return alert("Email dan Password wajib diisi!");
+    e.preventDefault();
+
+    if (!formData.email || (!formData.password && viewMode === 'create')) {
+        toast.error("Email dan Password wajib diisi!");
+        return;
+    }
+
+    setSubmitting(true);
+    try {
+        const { id, ...payload } = formData;
+
+        if (viewMode === 'edit' && !payload.password) {
+            delete payload.password;
         }
 
-        setSubmitting(true);
-        try {
-            const { id, ...payload } = formData;
-            
-            if (viewMode === 'edit' && !payload.password) {
-                delete payload.password;
-            }
+        let actionText = "";
 
-            let actionText = "";
+        if (viewMode === 'edit') {
+            const { error } = await supabase.from('users').update(payload).eq('id', id);
+            if (error) throw error;
+            actionText = "diperbarui";
+        } else {
+            const { error } = await supabase.from('users').insert([payload]);
+            if (error) throw error;
+            actionText = "ditambahkan";
+        }
 
-            if (viewMode === 'edit') {
-                const { error } = await supabase.from('users').update(payload).eq('id', id);
-                if (error) throw error;
-                actionText = "diperbarui";
-            } else {
-                const { error } = await supabase.from('users').insert([payload]);
-                if (error) throw error;
-                actionText = "ditambahkan";
-            }
+        toast.success(`User berhasil ${actionText}!`);
+        fetchUsers();
 
-            alert(`User berhasil ${actionText}!`);
-            fetchUsers();
-
-            if (createAnother && viewMode === 'create') {
-                setFormData(initialForm);
-            } else {
-                backToList();
-            }
+        if (createAnother && viewMode === 'create') {
+            setFormData(initialForm);
+        } else {
+            backToList();
+        }
         } catch (error) {
-            alert('Gagal: ' + error.message);
+            toast.error("Gagal: " + error.message);
         } finally {
             setSubmitting(false);
         }
     };
 
+
     const handleDelete = async (id) => {
-        if(!window.confirm("Hapus user ini? Akses mereka akan hilang permanen kayaknya.")) return;
-        
-        try {
-            const { error } = await supabase.from('users').delete().eq('id', id);
-            if(error) throw error;
-            fetchUsers();
+    if (!window.confirm("Yakin ingin menghapus user ini?")) return;
+
+    try {
+        const { error } = await supabase.from('users').delete().eq('id', id);
+        if (error) throw error;
+
+        toast.success("User berhasil dihapus");
+        fetchUsers();
         } catch (error) {
-            alert("Gagal hapus: " + error.message);
+            toast.error("Gagal hapus: " + error.message);
         }
     };
-
     const openCreate = () => {
         setFormData(initialForm);
         setViewMode('create');
