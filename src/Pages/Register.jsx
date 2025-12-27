@@ -17,7 +17,8 @@ export default function Register() {
         full_name: '', email: '', password: '', confirmPassword: '', no_hp: '', secret_code: ''
     });
 
-    const KODE_RAHASIA = 'CIPELEM2025';
+    const KODE_PETUGAS = 'PSIGAP2025';
+    const KODE_BENDAHARA = 'BSIGAP2025';
     useEffect(() => {
         if (darkMode) {
             document.documentElement.classList.add('dark');
@@ -32,27 +33,38 @@ export default function Register() {
         setFormData({ ...formData, [e.target.name]: e.target.value });
         setError('');
     };
-
     const handleRegister = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-        try {
-            if (formData.password !== formData.confirmPassword) throw new Error('Konfirmasi kata sandi tidak cocok!');
-            if (formData.password.length < 6) throw new Error('Kata sandi minimal 6 karakter.');
-            if (formData.secret_code !== KODE_RAHASIA) throw new Error('Kode Rahasia Desa salah! Hubungi Admin Desa.');
+    try {
+        if (formData.password !== formData.confirmPassword) throw new Error('Konfirmasi kata sandi tidak cocok!');
+        let roleFinal = '';
 
-            const { data: existingUser } = await supabase.from('users').select('email').eq('email', formData.email).single();
-            if (existingUser) throw new Error('Email ini sudah terdaftar.');
+        if (formData.secret_code === KODE_PETUGAS) {
+            roleFinal = 'petugas';
+        } else if (formData.secret_code === KODE_BENDAHARA) {
+            roleFinal = 'bendahara';
+        } else {
+            throw new Error('Kode Registrasi Desa salah atau tidak terdaftar!');
+        }
 
-            const { error: insertError } = await supabase.from('users').insert([{
-                full_name: formData.full_name, email: formData.email, password: formData.password, role: 'petugas', no_hp: formData.no_hp, nik: '-'
-            }]);
+        const { data: existingUser } = await supabase.from('users').select('email').eq('email', formData.email).single();
+        if (existingUser) throw new Error('Email ini sudah terdaftar.');
 
-            if (insertError) throw insertError;
-            setSuccess(true);
-            setTimeout(() => navigate('/login'), 2000);
+        const { error: insertError } = await supabase.from('users').insert([{
+            full_name: formData.full_name, 
+            email: formData.email, 
+            password: formData.password, 
+            role: roleFinal,
+            no_hp: formData.no_hp, 
+            nik: '-'
+        }]);
+
+        if (insertError) throw insertError;
+        setSuccess(true);
+        setTimeout(() => navigate('/login'), 2000);
 
         } catch (err) {
             setError(err.message);
