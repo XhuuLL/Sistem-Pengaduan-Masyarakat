@@ -4,7 +4,7 @@ import {
     FileText, CheckCircle2, TrendingUp, ArrowRight, 
     Shield, Activity, ChevronDown, ChevronUp, 
     Loader2, Megaphone, Wallet, Building2, Banknote, Users,
-    Facebook, Instagram, Twitter, Mail, Phone, MapPin
+    Facebook, Instagram, Twitter, Mail, Phone, MapPin, Globe
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
@@ -315,6 +315,9 @@ export default function Home() {
                                 </a>
                                 <a href="https://x.com/MasFatkhul?s=09" className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all duration-300 group">
                                     <Twitter className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                </a>
+                                <a href="https://my-portofolio-xhuull.vercel.app/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 transition-all duration-300 group">
+                                    <Globe className="w-5 h-5 group-hover:scale-110 transition-transform" />
                                 </a>
                             </div>
                         </div>
