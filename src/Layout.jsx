@@ -202,12 +202,6 @@ export default function Layout() {
                 <main className="pt-20">
                     <Outlet />
                 </main>
-
-                <footer className="bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 mt-20 py-8">
-                    <div className="max-w-7xl mx-auto px-4 text-center">
-                        <p className="text-gray-500 dark:text-slate-500 text-sm">© 2025 SIGAP Desa Cipelem By XhuuLL. All rights reserved.</p>
-                    </div>
-                </footer>
             </div>
         );
     }
