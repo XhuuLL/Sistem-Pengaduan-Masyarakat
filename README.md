@@ -4,7 +4,7 @@
 ![Tech Stack](https://img.shields.io/badge/Stack-React%20%7C%20Tailwind%20%7C%20Supabase-blue)
 
 ## 📖 Tentang Aplikasi
-Sistem Informasi Gangguan & Anggaran Perbaikan (SSIGAP) adalah aplikasi berbasis web yang dikembangkan sebagai produk luaran **Tugas Akhir Uas**. Aplikasi ini bertujuan untuk menjembatani komunikasi antara warga dengan perangkat desa dalam hal pelaporan masalah infrastruktur, pelayanan, keamanan, dan administrasi.
+Sistem Informasi Gangguan & Anggaran Perbaikan (SIGAP) adalah aplikasi berbasis web yang dikembangkan sebagai produk luaran **Tugas Akhir Uas**. Aplikasi ini bertujuan untuk menjembatani komunikasi antara warga dengan perangkat desa dalam hal pelaporan masalah infrastruktur, pelayanan, keamanan, dan administrasi.
 
 Dibuat dengan teknologi modern (**React.js + Supabase**), aplikasi ini memungkinkan pelaporan secara **Real-time**, transparan, dan responsif di berbagai perangkat (Mobile/Desktop).
 
