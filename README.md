@@ -47,8 +47,8 @@ Ikuti langkah ini untuk menjalankan aplikasi di komputer Anda:
 
 1.  **Clone Repository**
     ```bash
-    git clone [https://github.com/XhuuLL/sistem-pengaduan-cipelem.git](https://github.com/XhuuLL/sistem-pengaduan-cipelem.git)
-    cd sistem-pengaduan-cipelem
+    git clone https://github.com/XhuuLL/Sistem-Pengaduan-Masyarakat.git
+    cd Sistem-Pengaduan-Masyarakat
     ```
 
 2.  **Install Dependencies**
