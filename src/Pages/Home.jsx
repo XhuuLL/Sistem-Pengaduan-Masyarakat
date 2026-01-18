@@ -403,7 +403,7 @@ export default function Home() {
                         { icon: Facebook, link: "https://www.facebook.com/share/1CxjXGgtwK/" },
                         { icon: Instagram, link: "https://www.instagram.com/fatkhul.png?igsh=MTlxamRuNWM3MXF0Mw==" },
                         { icon: Twitter, link: "https://x.com/MasFatkhul?s=09" },
-                        { icon: Globe, link: "https://my-portofolio-xhuull.vercel.app/" }
+                        { icon: Globe, link: "https://xhuull.github.io/Portfolio-React/" }
                     ].map((social, i) => (
                         <a 
                             key={i}
